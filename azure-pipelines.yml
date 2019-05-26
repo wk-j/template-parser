@@ -14,11 +14,11 @@ pool:
 
 # pool:
 #   vmImage: 'macOS-10.13'
-  
+
 variables:
   buildConfiguration: 'Release'
   version: '0.2.1'
-  repository: "wk-j/azure-release"
+  repository: "wk-j/template-parser"
 
 steps:
 
