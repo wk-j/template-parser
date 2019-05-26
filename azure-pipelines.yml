@@ -35,7 +35,7 @@ steps:
 - script: dotnet test src/TemplateParser.Tests --logger trx --collect "Code coverage"
 - task: PublishTestResults@2
   inputs:
-    testRunner: xunit
+    testRunner: VSTest
     testResultsFiles: '**/*.trx'
 
 - script: ~/.dotnet/tools/dotnet-cake -target=Pack
