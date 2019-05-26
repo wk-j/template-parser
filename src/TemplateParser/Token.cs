@@ -5,64 +5,47 @@ using System.IO;
 using System.Text;
 using Microsoft.Extensions.Logging;
 
-namespace TemplateParser
-{
-
-    public class Token
-    {
+namespace TemplateParser {
+    public class Token {
 
         private readonly ILogger<Token> _logger;
-        public Token(ILogger<Token> logger)
-        {
+        public Token(ILogger<Token> logger) {
             _logger = logger;
         }
 
-        private string[] ParseParams(string paramString)
-        {
+        private string[] ParseParams(string paramString) {
             _logger.LogInformation("parse params - {0}", paramString);
 
             paramString = paramString.Trim();
             var paramList = new List<string>();
             var sb = new StringBuilder();
             var j = 0;
-            for (; j < paramString.Length; ++j)
-            {
+            for (; j < paramString.Length; ++j) {
                 var indexParam = -1;
 
-                if (paramString[j] == ',')
-                {
+                if (paramString[j] == ',') {
                     paramList.Add(string.Empty);
                     continue;
-                }
-                else if (paramString[j] == '\"')
-                {
+                } else if (paramString[j] == '\"') {
                     var nextIndex = -1;
-                    try
-                    {
+                    try {
                         indexParam = paramString.IndexOf('\"', j + 1);
                         nextIndex = indexParam + 1;
-                    }
-                    catch { }
-                    if (indexParam != -1)
-                    {
+                    } catch { }
+                    if (indexParam != -1) {
                         paramList.Add(paramString.Substring(j + 1, indexParam - (j + 1)));
                         j = nextIndex;
                         while (j < paramString.Length && paramString[j] == ' ')
                             j++;
                         continue;
                     }
-                }
-                else
-                {
+                } else {
                     var nextIndex = -1;
-                    try
-                    {
+                    try {
                         indexParam = paramString.IndexOf(',', j);
                         nextIndex = indexParam;
-                    }
-                    catch { }
-                    if (indexParam != -1)
-                    {
+                    } catch { }
+                    if (indexParam != -1) {
                         paramList.Add(paramString.Substring(j, indexParam - (j)));
                         j = nextIndex;
                         while (j < paramString.Length && paramString[j] == ' ')
@@ -78,85 +61,69 @@ namespace TemplateParser
             return paramList.ToArray();
         }
 
-        private string ParseScript(string str, Dictionary<string, string> dict, ref int index)
-        {
+        private string ParseScript(string str, Dictionary<string, string> dict, ref int index) {
             var startIndex = index;
             var strB = new StringBuilder();
             var open = false;
-            for (; index < str.Length; index++)
-            {
-                if (open == false && str[index] == '{')
-                {
+            for (; index < str.Length; index++) {
+                if (open == false && str[index] == '{') {
                     strB.Append('{');
                     open = true;
-                }
-                else if (open == true && str[index] == '{')
+                } else if (open == true && str[index] == '{')
                     strB.Append(ParseScript(str, dict, ref index));
-                else if (open && str[index] == '}')
-                {
+                else if (open && str[index] == '}') {
                     strB.Append('}');
                     if (startIndex != 0) return ReplaceToken(strB.ToString(), dict);
-                    else
-                    {
+                    else {
                         open = false;
                     }
-                }
-                else
+                } else
                     strB.Append(str[index]);
             }
             return ReplaceToken(strB.ToString(), dict);
         }
 
-        public string ReplaceValue(string str, Dictionary<string, string> dict, params string[] param)
-        {
+        public string ReplaceValue(string str, Dictionary<string, string> dict, params string[] param) {
             var index = 0;
             if (str == null) return "";
             var ret = ParseScript(str, dict, ref index);
             return ret;
         }
 
-        private string ReplaceToken(string str, Dictionary<string, string> dict)
-        {
+        private string ReplaceToken(string str, Dictionary<string, string> dict) {
             if (dict == null) dict = new Dictionary<string, string>();
 
             _logger.LogInformation("replace token - {0}", str);
 
-            try
-            {
+            try {
                 if (str == null) return "";
                 var split = str.Split('{', '}');
 
                 _logger.LogInformation("split - {0}", string.Join("__", split));
 
                 if (split.Length < 3) return str;
-                for (var i = 1; i < split.Length; i += 2)
-                {
+                for (var i = 1; i < split.Length; i += 2) {
                     var function = split[i].Split(new char[] { '=', '(' }, 2, StringSplitOptions.None);
                     if (function == null || function.Length == 0) return str;
-                    if (split[i].Length > function[0].Length && split[i][function[0].Length] == '(')
-                    {
+                    if (split[i].Length > function[0].Length && split[i][function[0].Length] == '(') {
                         function[function.Length - 1] = function[function.Length - 1].TrimEnd(')');
                     }
                     var parameters = new string[0];
                     var returnValue = "";
-                    if (function.Length > 1)
-                    {
+                    if (function.Length > 1) {
                         function[1] = function[1].Trim();
                         parameters = ParseParams(function[1]);
                     }
 
                     _logger.LogInformation("result params - {0}", string.Join("__", parameters));
 
-                    switch (function[0].ToLower().Trim())
-                    {
-                        case "text":
-                            {
+                    switch (function[0].ToLower().Trim()) {
+                        case "text": {
                             }
                             break;
 
 
-                        case "datetimeformat":
-                            {
+                        case "datetimeformat": {
                                 var source = ReplaceToken(parameters[0].Trim(), dict);
                                 var format = ReplaceToken(parameters[1].Trim(), dict);
                                 var srcCulture = ReplaceToken(parameters[2].Trim(), dict);
@@ -164,13 +131,10 @@ namespace TemplateParser
 
                                 var culture = CultureInfo.GetCultureInfo(outCulture);
                                 var dt = DateTime.Now;
-                                if (string.IsNullOrEmpty(source) == false)
-                                {
-                                    try
-                                    {
+                                if (string.IsNullOrEmpty(source) == false) {
+                                    try {
                                         dt = DateTime.Parse(source, CultureInfo.GetCultureInfo(srcCulture).DateTimeFormat);
-                                    }
-                                    catch { }
+                                    } catch { }
                                 }
                                 if (string.IsNullOrEmpty(format) == true)
                                     format = "yyyy-MM-dd HHmmss";
@@ -178,8 +142,7 @@ namespace TemplateParser
                             }
                             break;
 
-                        case "converttime":
-                            {
+                        case "converttime": {
                                 var source = ReplaceToken(parameters[0].Trim(), dict);
                                 var formatSrc = ReplaceToken(parameters[1].Trim(), dict);
                                 var formatDest = ReplaceToken(parameters[2].Trim(), dict);
@@ -194,13 +157,10 @@ namespace TemplateParser
                                 var cultureSrc = CultureInfo.GetCultureInfo(localeSrc);
                                 var cultureDest = CultureInfo.GetCultureInfo(localeDest);
                                 var dt = DateTime.Now;
-                                if (string.IsNullOrEmpty(source) == false)
-                                {
-                                    try
-                                    {
+                                if (string.IsNullOrEmpty(source) == false) {
+                                    try {
                                         dt = DateTime.ParseExact(source, formatSrc, cultureSrc.DateTimeFormat);
-                                    }
-                                    catch { }
+                                    } catch { }
                                 }
                                 if (string.IsNullOrEmpty(formatDest) == true)
                                     formatDest = "yyyy-MM-dd HHmmss";
@@ -208,31 +168,17 @@ namespace TemplateParser
                             }
                             break;
 
-                        case "setgenerate"://name, value
-                            {
-                            }
-                            break;
-
+                        case "setgenerate":
                         case "readgenerate":
-                            {
-                            }
-                            break;
-
                         case "globalgenerate":
                         case "cachegenerate":
-                        case "generate":
-                            {
-                            }
-                            break;
+                        case "relativepath":
+                        case "generate": break;
 
-
-                        case "replace":
-                            {
-                                if (function.Length >= 1)
-                                {
+                        case "replace": {
+                                if (function.Length >= 1) {
                                     var sParamSplit = parameters;
-                                    if (sParamSplit.Length >= 3)
-                                    {
+                                    if (sParamSplit.Length >= 3) {
                                         returnValue = sParamSplit[0].Replace(sParamSplit[1], sParamSplit[2]);
                                     }
                                 }
@@ -240,31 +186,22 @@ namespace TemplateParser
                             break;
 
 
-                        case "relativepath":
-                            {
-                            }
-                            break;
 
-                        case "time":
-                            {
+                        case "time": {
                                 var culture = new CultureInfo("en-US");
                                 var format = "yyyy-MM-dd";
 
                                 if (function.Length <= 1)
                                     returnValue = "" + DateTime.Now.ToString(format, culture);
-                                else
-                                {
+                                else {
                                     var paramSplit = parameters;
                                     if (paramSplit.Length <= 1)
                                         returnValue = "" + DateTime.Now.ToString(paramSplit[0].Trim());
-                                    else if (paramSplit.Length <= 2)
-                                    {
+                                    else if (paramSplit.Length <= 2) {
                                         DateTime dt;
                                         if (DateTime.TryParse(paramSplit[1].Trim(), out dt))
                                             returnValue = "" + dt.ToString(paramSplit[0].Trim(), culture);
-                                    }
-                                    else if (paramSplit.Length <= 3)
-                                    {
+                                    } else if (paramSplit.Length <= 3) {
                                         DateTime dt;
 
                                         var timeFormat = paramSplit[0].Trim();
@@ -274,12 +211,10 @@ namespace TemplateParser
                                         if (string.IsNullOrEmpty(locale) == false)
                                             cul = CultureInfo.GetCultureInfo(locale);
 
-                                        if (string.IsNullOrEmpty(timeSrc) == false)
-                                        {
+                                        if (string.IsNullOrEmpty(timeSrc) == false) {
                                             if (DateTime.TryParse(paramSplit[1].Trim(), out dt))
                                                 returnValue = "" + dt.ToString(timeFormat, cul);
-                                        }
-                                        else
+                                        } else
                                             returnValue = DateTime.Now.ToString(timeFormat, cul);
                                     }
                                 }
@@ -287,10 +222,8 @@ namespace TemplateParser
                             break;
 
 
-                        case "substr":
-                            {
-                                if (function.Length > 1)
-                                {
+                        case "substr": {
+                                if (function.Length > 1) {
                                     var variable = "";
                                     int start = 0, cnt = -1;
                                     var paramSubstr = parameters;
@@ -304,25 +237,18 @@ namespace TemplateParser
 
                                     var val = variable.Trim();
 
-                                    try
-                                    {
-                                        if (start >= 0 && start < val.Length && cnt == -1)
-                                        {
+                                    try {
+                                        if (start >= 0 && start < val.Length && cnt == -1) {
                                             if (start < val.Length)
                                                 val = val.Substring(start);
-                                        }
-                                        else if (start >= 0 && start < val.Length && cnt > 0)
-                                        {
-                                            if (start < val.Length)
-                                            {
+                                        } else if (start >= 0 && start < val.Length && cnt > 0) {
+                                            if (start < val.Length) {
                                                 if (start + cnt > val.Length)
                                                     cnt = val.Length - start;
                                                 val = val.Substring(start, cnt);
                                             }
                                         }
-                                    }
-                                    catch (Exception ex)
-                                    {
+                                    } catch (Exception ex) {
                                         _logger.LogError(ex.ToString());
                                     }
 
@@ -331,17 +257,12 @@ namespace TemplateParser
                             }
                             break;
 
-                        case "aspect":
-                            {
+                        case "aspect": {
                                 var culture = new CultureInfo("en-US");
-                                foreach (var property in dict)
-                                {
-                                    if (property.Key != function[1])
-                                    {
+                                foreach (var property in dict) {
+                                    if (property.Key != function[1]) {
                                         continue;
-                                    }
-                                    else
-                                    {
+                                    } else {
                                         returnValue = property.Value;
                                         _logger.LogInformation("aspect - {0}", returnValue);
                                         break;
@@ -359,9 +280,7 @@ namespace TemplateParser
                 var join = string.Join("", split);
                 return join;
 
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 _logger.LogError(e.ToString());
             }
             return str;
