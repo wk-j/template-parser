@@ -26,14 +26,20 @@ steps:
 #   inputs:
 #     version: '3.0.100-preview3-010431'
 
+# - script: '%USERPROFILE%/.dotnet/tools/dotnet-cake -target=Pack'
+#   displayName: 'Build with Cake'
+
 - script: dotnet tool install -g Cake.Tool
   displayName: "Install Cake"
 
+- script: dotnet test src/TemplateParser.Tests --logger trx --collect "Code coverage"
+- task: PublishTestResults@2
+  inputs:
+    testRunner: xunit
+    testResultsFiles: '**/*.trx'
+
 - script: ~/.dotnet/tools/dotnet-cake -target=Pack
   displayName: 'Build with Cake'
-
-# - script: '%USERPROFILE%/.dotnet/tools/dotnet-cake -target=Pack'
-#   displayName: 'Build with Cake'
 
 - task: NuGetCommand@2
   displayName: 'NuGet push'
